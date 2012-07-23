@@ -11,7 +11,7 @@
 # http://www.oracle.com/technetwork/database/express-edition/11gxe-beta-download-302519.html
 
 # Change this if necessary. Perhaps version and filename will change at some point
-ORACLE_FILE=oracle-xe_11.2.0-1.5_amd64.deb
+ORACLE_FILE='oracle-xe_11.2.0-2_amd64.deb'
 
 # check for Oracle package in local dir
 if [ ! -f $ORACLE_FILE ]; then
@@ -22,7 +22,7 @@ fi
 
 # install pre-reqs
 echo Installing needed libraries
-sudo apt-get -y install libaio1 bc
+sudo apt-get -y install libaio1 bc chkconfig
 
 
 # create /sbin/chkconfig if it doesn't exist (like on Ubuntu)
@@ -52,8 +52,29 @@ fi
 
 # install Oracle package
 echo Starting Oracle install
-sudo dpkg -i oracle-xe_11.2.0-1.5_amd64.deb
+sudo dpkg -i "${ORACLE_FILE}"
 
+######
+# WORKAROUNDS by tia
+#
+[ ! -e '/bin/awk' ] && ln -s '/usr/bin/awk' '/bin/awk'
+
+mkdir -p /var/lock/subsys
+sed -E 's>(CONFIGURATION="/etc/default/.*)>\1\n        mkdir -p "/var/lock/subsys" >' -i /etc/init.d/oracle-xe
+
+update-rc.d oracle-xe defaults
+
+export ORACLE_HOME=/u01/app/oracle/product/11.2.0/xe
+export ORACLE_SID=XE
+cat - >> '/etc/environment' << EOF
+ORACLE_HOME=${ORACLE_HOME}
+ORACLE_SID=${ORACLE_SID}
+EOF
+
+export PATH="$PATH:${ORACLE_HOME}/bin"
+sed -E "s>^(PATH=.*[^\"])([\"]*)$>\1:${ORACLE_HOME}/bin\2>g" -i '/etc/environment'
+#
+######
 
 # configure Oracle
 echo Configuring Oracle
@@ -81,4 +102,6 @@ echo
 echo Reconfigure: sudo /etc/init.d/oracle-xe configure
 echo Stop:  sudo /etc/init.d/oracle-xe stop
 echo Start: sudo /etc/init.d/oracle-xe start
+echo
+echo Usage: sqlplus SYSTEM/\<password\>@XE
 echo
