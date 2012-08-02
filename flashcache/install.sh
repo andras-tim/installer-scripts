@@ -31,6 +31,7 @@ cout 'Preparing DKMS'
 make -f Makefile.dkms boot_conf
 
 cout 'Preparing man pages'
+cd "$DEST/man"
 make
 make install
 
